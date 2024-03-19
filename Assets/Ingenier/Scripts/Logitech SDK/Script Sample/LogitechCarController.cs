@@ -8,6 +8,7 @@ public class LogitechCarController : MonoBehaviour
 {
     [SerializeField]
     private LogitechExample logitechExample;
+    string[] activeForceAndEffect;
 
     [SerializeField] private float horizontalInput, verticalInput;
     private float currentSteerAngle, currentbreakForce;
@@ -24,41 +25,125 @@ public class LogitechCarController : MonoBehaviour
     // Wheels
     [SerializeField] private Transform frontLeftWheelTransform, frontRightWheelTransform;
     [SerializeField] private Transform rearLeftWheelTransform, rearRightWheelTransform;
-    [SerializeField] private  int currentSpeedKMH;
+    [SerializeField] public  int currentSpeedKMH;
+    [SerializeField] private bool stateReverse = false;
         public float reduccionVelocidadPorSegundo = 1f; // Reducción de velocidad constante en metros por segundo
 
-    public TextMeshProUGUI speedText;
+
+    //public TextMeshProUGUI speedText;
+    
     
 
-    private void Start() {
-        LogitechGSDK.LogiPlaySpringForce(0, 0, 30, 30);
+      private void Start() {
+        
+        activeForceAndEffect = new string[9];
+        StartCoroutine(ActivateSpringForce());
     }
     private void FixedUpdate() {
         GetInput();
         HandleMotor();
         HandleSteering();
         UpdateWheels();
+        CalculateSpeed();
+        
     }
+
+    
+
+      IEnumerator ActivateSpringForce()
+    {
+        // Esperar unos segundos antes de activar la fuerza de resorte
+        yield return new WaitForSeconds(0.5f);
+
+        // Activar la fuerza de resorte
+        LogitechGSDK.LogiPlaySpringForce(0, 0, 30, 30);
+        activeForceAndEffect[0] = "Spring Force\n ";
+        LogitechGSDK.LogiPlayLeds(0, 20, 20, 20);
+    }
+
 
     private void GetInput() {
         // Steering Input
         horizontalInput = Input.GetAxis("HorizontalLogitec");
-        verticalInput = Input.GetAxis("VerticalLogitec");
 
-        // Acceleration Input
-        if (logitechExample.GasInput > 0 )
-        {
-            verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
-        }else{
-            verticalInput = 0;
+
+        // > <
+
+        verticalInput = Input.GetAxis("VerticalLogitec");
+        if(logitechExample.CurrentGear!= -1){
+            stateReverse = false;
+        }
+        
+        // CAMBIOS 1 A 6
+        if(logitechExample.CurrentGear == 1){
+            
+            if (logitechExample.GasInput > 0 && currentSpeedKMH < 24)
+            {   
+                
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
         }
 
-        // Brake Input
+        if(logitechExample.CurrentGear == 2){
+            if (logitechExample.GasInput > 0 && currentSpeedKMH > 8 && currentSpeedKMH < 45 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+
+        if(logitechExample.CurrentGear == 3){
+            if (logitechExample.GasInput > 0 && currentSpeedKMH > 18 && currentSpeedKMH < 65 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+
+        if(logitechExample.CurrentGear == 4){
+            if (logitechExample.GasInput > 0 && currentSpeedKMH > 38 && currentSpeedKMH < 80 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+        if(logitechExample.CurrentGear == 5){
+            if (logitechExample.GasInput > 0 && currentSpeedKMH > 50 && currentSpeedKMH < 100 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+
+        if(logitechExample.CurrentGear == 6){
+            if (logitechExample.GasInput > 0 && currentSpeedKMH > 70 && currentSpeedKMH < 150 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+        
+        // REVERSA
+        if(logitechExample.CurrentGear == -1){
+            stateReverse = true;
+            
+            if (logitechExample.GasInput > 0 )
+            {
+                verticalInput = Mathf.Lerp(0f, 1f, logitechExample.GasInput); // Acelerar al presionar el gancho izquierdo
+            }else{
+                verticalInput = 0;
+            }
+        }
+        
         // Brake Input
         float brakeInput = logitechExample.BreakInput;
-
-
-        // Breaking Input
         isBreaking = Input.GetKey(KeyCode.Space);
         isBreaking = brakeInput > 0;
     }
@@ -75,16 +160,20 @@ public class LogitechCarController : MonoBehaviour
             GetComponent<Rigidbody>().velocity = Vector3.zero;
         }
     }
-    else
+    else if(stateReverse == false)
     {
         // Si se está acelerando, aplicar la fuerza del motor
-        frontLeftWheelCollider.motorTorque = verticalInput * motorForce * -1;
-        frontRightWheelCollider.motorTorque = verticalInput * motorForce * -1 ;
+        rearLeftWheelCollider.motorTorque = verticalInput * motorForce * -1;
+        rearRightWheelCollider.motorTorque = verticalInput * motorForce * -1 ;
+    }else if(stateReverse == true){
+        rearLeftWheelCollider.motorTorque = verticalInput * motorForce * 1;
+        rearRightWheelCollider.motorTorque = verticalInput * motorForce * 1 ;
     }
         currentbreakForce = isBreaking ? breakForce : 0f;
         ApplyBreaking();
     }
 
+   
     private void ApplyBreaking() {
         frontRightWheelCollider.brakeTorque = currentbreakForce;
         frontLeftWheelCollider.brakeTorque = currentbreakForce;
@@ -118,12 +207,7 @@ public class LogitechCarController : MonoBehaviour
         float speedMS = GetComponent<Rigidbody>().velocity.magnitude; // velocidad en metros/segundo
         float speedKMH = speedMS * 3.6f; // Convertir a km/h
         currentSpeedKMH = Mathf.RoundToInt(speedKMH); // Redondear a un entero
-
-         //Asegurarse de que la variable speedText no sea nula
-        if (speedText != null)
-        {
-            speedText.text = "" + currentSpeedKMH.ToString() + " km/h"; // Actualizar el texto de la velocidad
-            
-        }
     }
+
+    
 }
