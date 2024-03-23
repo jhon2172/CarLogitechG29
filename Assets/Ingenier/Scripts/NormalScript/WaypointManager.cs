@@ -1,25 +1,151 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using TMPro;
 
 public class WaypointManager : MonoBehaviour
 {
     public List<Transform> waypoints = new List<Transform>();
+    public List<Vector3> waypointPosition = new List<Vector3>();
     public Material lineMaterial;
     public Color lineColor = Color.red;
     public float lineWidth = 1f;
-    public int selectedWaypointIndex = -1; // Nuevo campo para almacenar el índice del waypoint seleccionado
+    public int selectedWaypointIndex = 0; // Nuevo campo para almacenar el índice del waypoint seleccionado
     public int select01 = 0; // Nuevo campo para almacenar el índice del primer waypoint seleccionado
     public int select02 = 0; // Nuevo campo para almacenar el índice del segundo waypoint seleccionado
 
+    public Transform pointB; // Punto B (puedes asignarlo desde el editor o por código si es necesario)
+    public Transform pointAA; // Punto B (puedes asignarlo desde el editor o por código si es necesario)
+
+    public LineRenderer lineRenderer; // Referencia al Line Renderer
+    public TextMeshProUGUI  distanceText; // Texto para mostrar la distancia
+    public Vector3 cubeSize = new Vector3(2f, 2f, 2f); // Tamaño predeterminado del cubo
+    public bool isTrigger = false;
+    public Material cubeMaterial;
+
+
+
+
     // Método para agregar un nuevo waypoint (cubo)
+     void Start()
+    {
+        
+
+    }
+
+    void principal(){
+
+        UpdateWaypointPositions();
+        
+        //PrintWaypointPositions();
+
+
+        // Establecer las posiciones de los puntos en el LineRenderer
+        lineRenderer.positionCount = waypointPosition.Count; // Establecer el número de puntos en el LineRenderer
+
+
+        // Establecer las posiciones de los puntos en el LineRenderer
+        for (int i = 0; i < waypointPosition.Count; i++)
+        {
+            if (i < lineRenderer.positionCount) // Verificar que el índice esté dentro del rango del LineRenderer
+            {
+                lineRenderer.SetPosition(i, waypointPosition[i]);
+                //Debug.Log("WPos: "+i+" , "+ waypointPosition[i]);
+            }
+            else
+            {
+                Debug.LogWarning("Index out of bounds: " + i);
+            }
+        }
+    }
+
+    
+    void Update()
+    {
+        // Obtener la posición actual del jugador (punto A)
+        Vector3 pointA = transform.position;
+
+        
+
+        // Actualizar la posición del punto A en el Line Renderer
+       //lineRenderer.SetPosition(0, pointA);
+
+        // Obtener la posición de punto B
+        Vector3 pointBPosition = pointB.position;
+
+        // Actualizar la posición del punto B en el Line Renderer
+        //lineRenderer.SetPosition(1, pointBPosition);
+
+        // Calcular la distancia entre los puntos A y B
+        float distance = Vector3.Distance(pointA, pointBPosition);
+        
+        int roundedDistance = Mathf.RoundToInt(distance);
+
+        principal();
+    
+
+        // Mostrar la distancia en el texto de TextMeshPro
+        distanceText.text = roundedDistance.ToString();
+    }
+
+    void UpdateWaypointPositions()
+    {
+        waypointPosition.Clear(); // Limpiar la lista antes de actualizar las posiciones
+        Vector3 pointA = pointAA.position;
+         waypointPosition.Add(pointA);
+         
+
+        foreach (Transform waypoint in waypoints)
+        {
+            
+           // waypointPosition.Add(pointA); // Agregar la posición de cada waypoint a la lista
+            waypointPosition.Add(waypoint.position); // Agregar la posición de cada waypoint a la lista
+        }
+
+        Vector3 pointBPosition = pointB.position;
+        waypointPosition.Add(pointBPosition);
+
+
+    }
+
+    void PrintWaypointPositions()
+    {
+        //Debug.Log("Posiciones de los waypoints:");
+        for (int i = 0; i < waypointPosition.Count; i++)
+        {
+           // Debug.Log("Waypoint " + i + ": " + waypointPosition[i]);
+        }
+    }
     public void AddWaypoint()
     {
         GameObject newWaypointObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
         newWaypointObj.name = "Waypoint " + (waypoints.Count + 1);
         newWaypointObj.transform.position = transform.position;
+            newWaypointObj.transform.localScale = cubeSize; // Cambia los valores según necesites
+
         newWaypointObj.transform.parent = transform;
+
+        // Obtener el renderer del cubo
+        Renderer renderer = newWaypointObj.GetComponent<Renderer>();
+
+        // Verificar si se ha asignado un material personalizado
+        if (cubeMaterial != null)
+        {
+            // Asignar el material al renderer del cubo
+            renderer.material = cubeMaterial;
+        }
+
+
+        // Establecer si el cubo es un trigger
+        Collider collider = newWaypointObj.GetComponent<Collider>();
+        if (collider != null)
+        {
+            collider.isTrigger = isTrigger;
+        }
+
+        newWaypointObj.AddComponent<ColliderWayPoint>();
         waypoints.Add(newWaypointObj.transform);
+        
     }
 
     // Método para borrar todos los waypoints
@@ -50,6 +176,9 @@ public class WaypointManager : MonoBehaviour
             selectedWaypointIndex = -1;
         }
     }
+
+    
+     
 }
 
 [CustomEditor(typeof(WaypointManager))]
@@ -68,8 +197,8 @@ public class WaypointManagerEditor : Editor
         lineColorProp = serializedObject.FindProperty("lineColor");
         lineWidthProp = serializedObject.FindProperty("lineWidth");
         selectedWaypointIndexProp = serializedObject.FindProperty("selectedWaypointIndex"); // Asignar el campo del índice del waypoint seleccionado
-        select01Prop = serializedObject.FindProperty("select01"); // Asignar el campo del índice del primer waypoint seleccionado
-        select02Prop = serializedObject.FindProperty("select02"); // Asignar el campo del índice del segundo waypoint seleccionado
+        //select01Prop = serializedObject.FindProperty("select01"); // Asignar el campo del índice del primer waypoint seleccionado
+        //select02Prop = serializedObject.FindProperty("select02"); // Asignar el campo del índice del segundo waypoint seleccionado
     }
 
     public override void OnInspectorGUI()
@@ -78,9 +207,9 @@ public class WaypointManagerEditor : Editor
 
         WaypointManager waypointManager = (WaypointManager)target;
 
-        EditorGUILayout.PropertyField(lineMaterialProp);
-        EditorGUILayout.PropertyField(lineColorProp);
-        EditorGUILayout.PropertyField(lineWidthProp);
+        //EditorGUILayout.PropertyField(lineMaterialProp);
+        //EditorGUILayout.PropertyField(lineColorProp);
+        //EditorGUILayout.PropertyField(lineWidthProp);
 
         serializedObject.ApplyModifiedProperties();
 

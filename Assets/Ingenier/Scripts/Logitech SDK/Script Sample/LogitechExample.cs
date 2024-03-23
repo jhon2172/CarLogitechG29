@@ -105,8 +105,8 @@ public class LogitechExample : MonoBehaviour
     float horizontalInput = rec.lX / 32768f;
 
     // Calcular la rotación deseada basada en el valor del eje horizontal
-    float targetRotationZ = horizontalInput * maxRotationAngle * 2;
-
+    float targetRotationZ = horizontalInput * maxRotationAngle ;
+//  float targetRotationZ = horizontalInput * maxRotationAngle * 2;
     // Calcular la rotación actual del GameObject del volante
     float currentRotationZ = steeringWheel.transform.localEulerAngles.z;
 
